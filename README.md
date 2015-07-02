@@ -1,0 +1,2 @@
+# README
+- nlpチュートリアルのperceptronの実装

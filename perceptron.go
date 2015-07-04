@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -49,25 +50,27 @@ func extract_feature(file_name string) ([]Data, map[string]int) {
 	return datas, feature_dict
 }
 
-func train(datas []Data, feature_dict map[string]int) map[int]int {
+func train(datas []Data, feature_dict map[string]int, itr int) map[int]int {
 	weights := map[int]int{}
-	for _, data := range datas {
-		feature_vector := map[int]int{}
-		for _, word := range data.Words {
-			if _, ok := feature_dict[word]; ok {
-				feature_vector[feature_dict[word]] += 1
+	for idx := 0; idx < itr; idx++ {
+		for _, data := range datas {
+			feature_vector := map[int]int{}
+			for _, word := range data.Words {
+				if _, ok := feature_dict[word]; ok {
+					feature_vector[feature_dict[word]] += 1
+				}
 			}
-		}
 
-		// calculate dot
-		sum := 0
-		for key, value := range feature_vector {
-			sum += weights[key] * value
-		}
-		predict_label := signum(sum)
-		if predict_label != data.Label {
+			// calculate dot
+			sum := 0
 			for key, value := range feature_vector {
-				weights[key] += value * data.Label
+				sum += weights[key] * value
+			}
+			predict_label := signum(sum)
+			if predict_label != data.Label {
+				for key, value := range feature_vector {
+					weights[key] += value * data.Label
+				}
 			}
 		}
 	}
@@ -103,13 +106,23 @@ func test(file_name string, weights map[int]int, feature_dict map[string]int) []
 
 func main() {
 
+	var (
+		itr        = flag.Int("itr", 1, "iteration")
+		train_file = flag.String("train", "", "train file")
+		test_file  = flag.String("test", "", "test file")
+	)
+
+	flag.Parse()
+
 	// step1: extract feature
-	datas, feature_dict := extract_feature("./data/titles-en-test.labeled")
+	datas, feature_dict := extract_feature(*train_file)
 
 	// step2: train
-	weights := train(datas, feature_dict)
+	weights := train(datas, feature_dict, *itr)
 
 	// step3: test
-	labeles := test("./data/titles-en-test.word", weights, feature_dict)
-	fmt.Println(labeles)
+	labeles := test(*test_file, weights, feature_dict)
+	for _, label := range labeles {
+		fmt.Println(label)
+	}
 }
